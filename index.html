@@ -427,19 +427,42 @@ let state = {
   hasWritten: false,
 };
 
-// For demo mode – shared via localStorage
+// ── Unified data layer: localStorage in demo mode, Firebase in real mode ──
 const LS_KEY = () => `wod_room_${state.roomCode}`;
 
+// In-memory cache of the room for Firebase mode (kept fresh by the listener)
+let fbRoomCache = null;
+
 function lsGet() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY()) || 'null'); } catch { return null; }
+  if (DEMO_MODE) {
+    try { return JSON.parse(localStorage.getItem(LS_KEY()) || 'null'); } catch { return null; }
+  } else {
+    return fbRoomCache;
+  }
 }
 function lsSet(data) {
-  localStorage.setItem(LS_KEY(), JSON.stringify(data));
+  if (DEMO_MODE) {
+    localStorage.setItem(LS_KEY(), JSON.stringify(data));
+  } else {
+    db.ref('rooms/' + state.roomCode).set(data);
+  }
 }
 function lsMerge(patch) {
-  const d = lsGet() || {};
-  Object.assign(d, patch);
-  lsSet(d);
+  if (DEMO_MODE) {
+    const d = lsGet() || {};
+    Object.assign(d, patch);
+    localStorage.setItem(LS_KEY(), JSON.stringify(d));
+  } else {
+    db.ref('rooms/' + state.roomCode).update(patch);
+  }
+}
+
+// Start Firebase room listener — keeps fbRoomCache fresh
+function startFirebaseListener() {
+  if (DEMO_MODE || !state.roomCode) return;
+  db.ref('rooms/' + state.roomCode).on('value', snap => {
+    fbRoomCache = snap.val();
+  });
 }
 
 // ══════════════════════════════════════════════════════
@@ -502,10 +525,10 @@ function goTeach() {
 
   if (DEMO_MODE) {
     lsSet({ code, players:{}, phase:'lobby', scores:[3,3,3,3], eliminated:[false,false,false,false], roundNum:0, submissions:{}, teamVotes:{}, prompt:'' });
-    // Poll for player joins
     startTeacherPoll();
   } else {
-    db.ref('rooms/' + code).set({ phase:'lobby', scores:[3,3,3,3], eliminated:[false,false,false,false], roundNum:0 });
+    startFirebaseListener();
+    db.ref('rooms/' + code).set({ phase:'lobby', scores:[3,3,3,3], eliminated:[false,false,false,false], roundNum:0, submissions:{}, teamVotes:{}, prompt:'' });
     db.ref('rooms/' + code + '/players').on('value', snap => updateWaitingList(snap.val() || {}));
   }
   showScreen('s-wait');
@@ -566,6 +589,7 @@ function submitJoin() {
         return;
       }
       state.roomCode = raw;
+      startFirebaseListener();
       db.ref('rooms/' + raw + '/players').once('value', ps => {
         const count = ps.val() ? Object.keys(ps.val()).length : 0;
         const teamId = count % 4;
@@ -672,12 +696,8 @@ function teacherSendPrompt() {
   if (!prompt) return;
   state.prompt = prompt;
 
-  if (DEMO_MODE) {
-    const writeEnd = Date.now() + 180000;
-    lsMerge({ phase:'writing', prompt, submissions:{}, teamVotes:{}, writeEnd });
-  } else {
-    db.ref('rooms/' + state.roomCode).update({ phase:'writing', prompt, submissions:{}, teamVotes:{} });
-  }
+  const writeEnd = Date.now() + 180000;
+  lsMerge({ phase:'writing', prompt, submissions:{}, teamVotes:{}, writeEnd });
   startWritingPhaseTeacher(prompt);
 }
 
@@ -905,7 +925,7 @@ function closeRespModal() {
 // ══════════════════════════════════════════════════════
 async function runJudge() {
   document.getElementById('judge-btn').disabled = true;
-  document.getElementById('judge-status').textContent = 'The Writer is reading...';
+  document.getElementById('judge-status').textContent = 'The Writer is evaluating your work...';
   const room = lsGet();
   const votes = room.teamVotes || {};
   const prompt = room.prompt || state.prompt;
@@ -924,11 +944,11 @@ async function runJudge() {
 
   showWriterThinking();
 
-  const systemPrompt = `You are "The Writer", a strict but fair AI judge for a classroom writing game called Write Or Drop. 
+  const systemPrompt = `You are "The Writer", a strict but fair AI judge for a classroom writing game called Write Or Drop. all of your students are around grade 7-6.
 Your job: given a prompt and several team responses, rank them from best to worst, and give a SHORT fun comment about each.
 
 Scoring rubric:
-- gibberish (like "thjaitohjatiohjath"): grade as "gibberish"
+- gibberish (like "thjaitohjatiohjath") or something HIGHLY inappropriate: grade as "gibberish"
 - bad: off-topic, very poor writing
 - average: on-topic but basic
 - good: well-written, clear
@@ -1213,19 +1233,6 @@ const TAGLINES = [
   "Look folks, this stainless steel signature-edition blade will cut through anything. But it's not gonna stick around long at the nice price of $19.99, so call in right now and get cutting!",
   'How do I get rid of 30-50 feral hogs?',
   'Did you know #4: Giraffes are more likely to get struck by lightning than any other animal.',
-  'Do a barrel roll!',
-  'Hey, you. Youre finally awake.',
-  'Round 1, FIGHT!',
-  'Did you know #5: Honey, when perserved correctly, can never spoil.',
-  'Not to worry, we are still flying half a ship.',
-  'Snake? Snake!? SNAKE!!!!!!',
-  'We require more minerals.',
-  'We remember the Freeman. We are coterminous.',
-  'Rise and shine, Mr. Freeman.',
-  '4 pixels caused all of this?',
-  'You cant just shoot a hole into the surface of Mars!',
-  'Did you know #6: Crows can recognize human faces.',
-  'So, whose brilliant idea was it to put a MAN-SIZED VENTILATION DUCT in there!?'
 ];
 (function setTagline(){
   const el = document.getElementById('menu-sub');
