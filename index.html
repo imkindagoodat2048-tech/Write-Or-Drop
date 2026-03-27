@@ -611,26 +611,32 @@ function startTeacherPoll() {
 //  STUDENT POLL
 // ══════════════════════════════════════════════════════
 let studentPollInterval = null;
+let lastSeenPhase = null;
 function startStudentPoll() {
   if (studentPollInterval) clearInterval(studentPollInterval);
+  lastSeenPhase = null;
   studentPollInterval = setInterval(() => {
     const room = lsGet();
     if (!room) return;
     const phase = room.phase;
-    if (phase === 'writing' && state.phase !== 'writing' && state.phase !== 'written') {
+    // Only act when room phase actually changes
+    if (phase === lastSeenPhase) return;
+    lastSeenPhase = phase;
+    if (phase === 'writing') {
       state.phase = 'writing';
       state.prompt = room.prompt || '';
       startWritingPhase();
-    } else if (phase === 'voting' && state.phase !== 'voting' && state.phase !== 'voted') {
+    } else if (phase === 'voting') {
+      autoSubmitWriting(); // save anything unsubmitted
       state.phase = 'voting';
       startVotingPhase(room);
-    } else if (phase === 'results' && state.phase !== 'results') {
+    } else if (phase === 'results') {
       state.phase = 'results';
       showResultsArena(room);
-    } else if (phase === 'end' && state.phase !== 'end') {
+    } else if (phase === 'end') {
       state.phase = 'end';
       showEndScreen(room);
-    } else if (phase === 'lobby' && state.phase === 'results') {
+    } else if (phase === 'lobby') {
       state.phase = 'lobby-wait';
       showScreen('s-student-wait');
       document.getElementById('sw-team-label').textContent = 'NEXT ROUND STARTING...';
@@ -702,21 +708,21 @@ function startWritingPhase() {
   document.getElementById('write-ta').value = '';
   document.getElementById('write-ta').disabled = false;
   document.getElementById('write-submit-btn').disabled = false;
+  document.getElementById('write-submit-btn').textContent = 'SUBMIT';
   showScreen('s-write');
 
   const td = document.getElementById('timer-display');
   td.className = '';
+  if (state.writeTimer) clearInterval(state.writeTimer);
   state.writeTimer = setInterval(() => {
     const r = lsGet();
     if (!r) return;
+    // If room moved on, clear timer and let poll handle it
+    if (r.phase !== 'writing') { clearInterval(state.writeTimer); return; }
     const secs = Math.max(0, Math.round((r.writeEnd - Date.now()) / 1000));
     td.textContent = formatTime(secs);
     if (secs <= 30) td.classList.add('urgent');
-    if (secs <= 0) {
-      clearInterval(state.writeTimer);
-      autoSubmitWriting();
-    }
-  }, 1000);
+  }, 500);
 }
 
 function submitWriting() {
@@ -739,19 +745,16 @@ function submitWriting() {
 }
 
 function autoSubmitWriting() {
-  // Save anything still in the box when time runs out
+  if (state.hasWritten) return;
+  clearInterval(state.writeTimer);
+  state.hasWritten = true;
   const text = document.getElementById('write-ta').value.trim();
   if (text) {
     const room = lsGet();
     const subs = room.submissions || {};
-    const attemptKey = state.uid + '_' + (state.submitCount || 0);
-    subs[attemptKey] = { text, team: state.teamId, name: state.username };
-    state.submitCount = (state.submitCount || 0) + 1;
+    subs[state.uid] = { text, team: state.teamId, name: state.username };
     if (DEMO_MODE) lsMerge({ submissions: subs });
   }
-  state.phase = 'written';
-  showScreen('s-student-wait');
-  document.getElementById('sw-team-label').textContent = "TIME\'S UP! VOTING SOON...";
 }
 
 // ══════════════════════════════════════════════════════
