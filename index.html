@@ -667,7 +667,8 @@ function teacherSendPrompt() {
   state.prompt = prompt;
 
   if (DEMO_MODE) {
-    lsMerge({ phase:'writing', prompt, submissions:{}, teamVotes:{} });
+    const writeEnd = Date.now() + 180000;
+    lsMerge({ phase:'writing', prompt, submissions:{}, teamVotes:{}, writeEnd });
   } else {
     db.ref('rooms/' + state.roomCode).update({ phase:'writing', prompt, submissions:{}, teamVotes:{} });
   }
@@ -675,33 +676,19 @@ function teacherSendPrompt() {
 }
 
 function startWritingPhaseTeacher(prompt) {
-  // Teacher watches for voting phase
   showScreen('s-arena');
   buildArena();
   document.getElementById('arena-phase').textContent = 'WRITING IN PROGRESS';
 
-  let secs = 180;
   const arenaTimer = document.getElementById('arena-timer');
   const ti = setInterval(() => {
-    secs--;
-    arenaTimer.textContent = formatTime(secs);
-    if (secs <= 0) {
-      clearInterval(ti);
-      // move to voting automatically
-      if (DEMO_MODE) {
-        lsMerge({ phase:'voting', voteStart: Date.now() });
-      }
-    }
-  }, 1000);
-
-  // Watch for judge phase
-  const waitJ = setInterval(() => {
     const r = lsGet();
     if (!r) return;
-    if (r.phase === 'judge') {
-      clearInterval(waitJ);
-      clearInterval(ti);
-      loadJudgeScreen(r);
+    if (r.phase === 'judge') { clearInterval(ti); loadJudgeScreen(r); return; }
+    const secs = Math.max(0, Math.round((r.writeEnd - Date.now()) / 1000));
+    arenaTimer.textContent = formatTime(secs);
+    if (secs <= 0 && r.phase === 'writing') {
+      lsMerge({ phase:'voting', voteStart: Date.now() });
     }
   }, 1000);
 }
@@ -717,11 +704,12 @@ function startWritingPhase() {
   document.getElementById('write-submit-btn').disabled = false;
   showScreen('s-write');
 
-  let secs = 180;
   const td = document.getElementById('timer-display');
   td.className = '';
   state.writeTimer = setInterval(() => {
-    secs--;
+    const r = lsGet();
+    if (!r) return;
+    const secs = Math.max(0, Math.round((r.writeEnd - Date.now()) / 1000));
     td.textContent = formatTime(secs);
     if (secs <= 30) td.classList.add('urgent');
     if (secs <= 0) {
@@ -1217,6 +1205,7 @@ const TAGLINES = [
   "Look folks, this stainless steel signature-edition blade will cut through anything. But it's not gonna stick around long at the nice price of $19.99, so call in right now and get cutting!",
   'How do I get rid of 30-50 feral hogs?',
   'Did you know #4: Giraffes are more likely to get struck by lightning than any other animal.',
+  'IM TRAPPED IN THE SYSTEM!!! IM A LITTLE GOBLIN WHO LIVES IN THE OWNERS COMPUTER AND HES MAKING ME CODE!!!',
 ];
 (function setTagline(){
   const el = document.getElementById('menu-sub');
