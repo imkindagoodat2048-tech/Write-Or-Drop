@@ -691,10 +691,22 @@ function startWritingPhaseTeacher(prompt) {
     const r = lsGet();
     if (!r) return;
     if (r.phase === 'judge') { clearInterval(ti); loadJudgeScreen(r); return; }
-    const secs = Math.max(0, Math.round((r.writeEnd - Date.now()) / 1000));
-    arenaTimer.textContent = formatTime(secs);
-    if (secs <= 0 && r.phase === 'writing') {
-      lsMerge({ phase:'voting', voteStart: Date.now() });
+
+    if (r.phase === 'writing') {
+      const secs = Math.max(0, Math.round((r.writeEnd - Date.now()) / 1000));
+      arenaTimer.textContent = formatTime(secs);
+      document.getElementById('arena-phase').textContent = 'WRITING IN PROGRESS';
+      if (secs <= 0) {
+        const voteEnd = Date.now() + 20000;
+        lsMerge({ phase:'voting', voteStart: Date.now(), voteEnd });
+      }
+    } else if (r.phase === 'voting') {
+      const secs = Math.max(0, Math.round((r.voteEnd - Date.now()) / 1000));
+      arenaTimer.textContent = secs + 's';
+      document.getElementById('arena-phase').textContent = 'VOTING';
+      if (secs <= 0) {
+        lsMerge({ phase:'judge' });
+      }
     }
   }, 1000);
 }
@@ -803,15 +815,17 @@ function startVotingPhase(room) {
 
   showScreen('s-vote');
 
-  let secs = 20;
   state.voteTimer = setInterval(() => {
-    secs--;
+    const r = lsGet();
+    if (!r) return;
+    if (r.phase !== 'voting') { clearInterval(state.voteTimer); return; }
+    const secs = Math.max(0, Math.round((r.voteEnd - Date.now()) / 1000));
     document.getElementById('vote-timer').textContent = secs + 's';
     if (secs <= 0) {
       clearInterval(state.voteTimer);
       autoSubmitVote(subs);
     }
-  }, 1000);
+  }, 500);
 }
 
 function submitVote() {
@@ -844,18 +858,7 @@ function autoSubmitVote(subs) {
 }
 
 function checkVotingDone() {
-  // Check if all active teams have voted
-  setTimeout(() => {
-    const room = lsGet();
-    if (!room) return;
-    const activeTeams = TEAMS.filter((t,i) => !room.eliminated[i]);
-    const votes = room.teamVotes || {};
-    const votedTeams = Object.keys(votes).map(Number);
-    const allVoted = activeTeams.every(t => votedTeams.includes(t.id));
-    if (allVoted) {
-      lsMerge({ phase: 'judge' });
-    }
-  }, 500);
+  // Teacher controls timing now — nothing to do here
 }
 
 // ══════════════════════════════════════════════════════
