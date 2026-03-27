@@ -369,20 +369,20 @@ button, input, textarea, select { font-family: 'Comic Sans MS', 'Chalkboard SE',
 //  FIREBASE CONFIG  – replace with your own project!
 // ══════════════════════════════════════════════════════
 const firebaseConfig = {
-  apiKey: "AIzaSyDEMO_REPLACE_WITH_YOUR_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  databaseURL: "https://your-project-default-rtdb.firebaseio.com",
-  projectId: "your-project",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:0000000000000000"
+  apiKey: "AIzaSyB9Rlvq49-AiLBzMDvjz71QCTT4d6NqE98",
+  authDomain: "mychat-28205.firebaseapp.com",
+  databaseURL: "https://mychat-28205-default-rtdb.firebaseio.com",
+  projectId: "mychat-28205",
+  storageBucket: "mychat-28205.firebasestorage.app",
+  messagingSenderId: "522121848657",
+  appId: "1:522121848657:web:7108993439310bf6da5570"
 };
 
 // ──────────────────────────────────────────────────────
 // DEMO MODE: uses localStorage to simulate multiplayer
 // when Firebase is not configured. Great for GitHub Pages!
 // ──────────────────────────────────────────────────────
-let DEMO_MODE = true; // set false if you add a real Firebase config above
+let DEMO_MODE = false; // set false if you add a real Firebase config above
 
 let db = null;
 try {
@@ -1213,6 +1213,19 @@ const TAGLINES = [
   "Look folks, this stainless steel signature-edition blade will cut through anything. But it's not gonna stick around long at the nice price of $19.99, so call in right now and get cutting!",
   'How do I get rid of 30-50 feral hogs?',
   'Did you know #4: Giraffes are more likely to get struck by lightning than any other animal.',
+  'Do a barrel roll!',
+  'Hey, you. Youre finally awake.',
+  'Round 1, FIGHT!',
+  'Did you know #5: Honey, when perserved correctly, can never spoil.',
+  'Not to worry, we are still flying half a ship.',
+  'Snake? Snake!? SNAKE!!!!!!',
+  'We require more minerals.',
+  'We remember the Freeman. We are coterminous.',
+  'Rise and shine, Mr. Freeman.',
+  '4 pixels caused all of this?',
+  'You cant just shoot a hole into the surface of Mars!',
+  'Did you know #6: Crows can recognize human faces.',
+  'So, whose brilliant idea was it to put a MAN-SIZED VENTILATION DUCT in there!?'
 ];
 (function setTagline(){
   const el = document.getElementById('menu-sub');
