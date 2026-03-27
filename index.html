@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Write Or Drop</title>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;600;800;900&display=swap');
+:root {
+  --bg: #0a0a14;
+  --panel: #12121f;
+  --card: #1a1a2d;
+  --border: #2a2a3e;
+  --primary: #4834d4;
+  --accent: #e8ff00;
+  --danger: #eb4d4b;
+  --green: #2ed573;
+  --text: #ffffff;
+  --muted: #555;
+  --t1: #ff6b6b;
+  --t2: #ffa502;
+  --t3: #2ed573;
+  --t4: #70a1ff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; justify-content: center; }
+button, input, textarea, select { font-family: 'DM Sans', sans-serif; }
+.hidden { display: none !important; }
+.bebas { font-family: 'Bebas Neue', cursive; }
+.mono { font-family: 'Space Mono', monospace; }
+
+/* ─── WRAPPER ─── */
+#wrap { width: 100%; max-width: 820px; height: 100vh; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--border); border-right: 1px solid var(--border); position: relative; overflow: hidden; }
+
+/* ─── TOPBAR ─── */
+#topbar { padding: 0 14px; height: 46px; background: rgba(18,18,31,0.98); border-bottom: 2px solid var(--primary); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; z-index: 10; }
+.top-title { font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 4px; color: var(--accent); }
+.top-right { display: flex; align-items: center; gap: 8px; }
+.tb-btn { background: #2a2a3e; color: #aaa; border: none; border-radius: 4px; padding: 4px 12px; font-size: 10px; cursor: pointer; font-weight: 700; transition: all .12s; }
+.tb-btn:hover { background: var(--primary); color: white; }
+.tb-pill { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+
+/* ─── SCREENS ─── */
+.screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ─── MENU ─── */
+#s-menu { align-items: center; justify-content: center; gap: 12px; }
+.menu-logo { font-family: 'Bebas Neue', cursive; font-size: 72px; letter-spacing: 8px; color: var(--accent); line-height: 1; text-align: center; }
+.menu-sub { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 3px; margin-bottom: 20px; }
+.menu-btn { width: 220px; padding: 13px 0; font-family: 'Bebas Neue', cursive; font-size: 26px; letter-spacing: 4px; background: transparent; border: 1px solid var(--border); color: white; cursor: pointer; transition: all .15s; }
+.menu-btn:hover { background: var(--primary); border-color: var(--primary); }
+
+/* ─── USERNAME ─── */
+#s-username { align-items: center; justify-content: center; gap: 14px; }
+.un-title { font-family: 'Bebas Neue', cursive; font-size: 32px; letter-spacing: 5px; color: var(--accent); }
+.un-input { width: 280px; background: var(--bg); border: 1px solid var(--border); color: white; padding: 12px 14px; border-radius: 8px; font-size: 14px; outline: none; }
+.un-input:focus { border-color: var(--primary); }
+.un-btn { width: 280px; padding: 12px; background: var(--primary); border: none; border-radius: 8px; color: white; font-weight: 800; font-size: 14px; cursor: pointer; }
+.err-text { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--danger); min-height: 16px; }
+
+/* ─── JOIN (student) ─── */
+#s-join { align-items: center; justify-content: center; gap: 14px; }
+.code-input { width: 280px; background: var(--bg); border: 1px solid var(--border); color: white; padding: 14px; border-radius: 8px; font-size: 22px; text-align: center; letter-spacing: 8px; outline: none; font-family: 'Bebas Neue', cursive; }
+.code-input:focus { border-color: var(--primary); }
+
+/* ─── WAIT LOBBY ─── */
+#s-wait { align-items: center; justify-content: center; gap: 8px; padding: 24px; }
+.wait-code { font-family: 'Bebas Neue', cursive; font-size: 80px; letter-spacing: 16px; color: var(--accent); line-height: 1; }
+.wait-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 3px; margin-bottom: 6px; }
+#wait-players { width: 100%; max-width: 460px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.wait-prow { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.wait-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 4px var(--green); }
+.teach-go-btn { margin-top: 14px; padding: 12px 40px; background: var(--accent); color: black; border: none; border-radius: 8px; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 4px; cursor: pointer; transition: opacity .12s; }
+.teach-go-btn:hover { opacity: .85; }
+
+/* ─── STUDENT WAIT ─── */
+#s-student-wait { align-items: center; justify-content: center; gap: 12px; padding: 24px; }
+.sw-title { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 4px; color: var(--accent); }
+
+/* ─── GAME ARENA ─── */
+#s-arena { position: relative; overflow: hidden; }
+
+/* team stage */
+#arena-stage { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; padding: 3px; background: var(--bg); position: relative; }
+.team-panel { background: var(--card); border: 2px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; position: relative; overflow: hidden; transition: border-color .3s; cursor: default; padding: 10px 6px 6px; }
+.team-panel.best-glow { border-color: var(--accent); box-shadow: 0 0 18px rgba(232,255,0,.3); }
+.team-panel.worst-glow { border-color: var(--danger); box-shadow: 0 0 18px rgba(235,77,75,.3); }
+.team-panel.eliminated { opacity: .4; filter: grayscale(1); }
+
+/* team rep icon */
+.team-icon { width: 54px; height: 54px; object-fit: contain; image-rendering: pixelated; }
+.team-icon-fallback { width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; }
+
+/* scores */
+.team-name { font-family: 'Bebas Neue', cursive; font-size: 18px; letter-spacing: 2px; margin-top: 2px; }
+.team-pts { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+.team-pts span { font-size: 22px; font-weight: 700; }
+.pt-heart { display: inline-block; width: 10px; height: 10px; background: var(--danger); border-radius: 1px; margin: 0 1px; transition: all .3s; }
+.pt-heart.empty { background: #2a2a3e; }
+
+/* floor drop animation */
+@keyframes floorDrop {
+  0% { transform: translateY(0); opacity: 1; }
+  30% { transform: translateY(8px); }
+  100% { transform: translateY(120%); opacity: 0; }
+}
+.team-panel.dropping .team-icon, .team-panel.dropping .team-icon-fallback { animation: floorDrop 1.2s ease-in forwards; }
+@keyframes floorOpen {
+  0% { box-shadow: none; }
+  40% { box-shadow: inset 0 -6px 20px rgba(235,77,75,.6); }
+  100% { box-shadow: inset 0 -6px 20px rgba(235,77,75,.6); }
+}
+.team-panel.dropping { animation: floorOpen 1.2s ease-in forwards; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.team-panel.best-anim .team-icon, .team-panel.best-anim .team-icon-fallback { animation: bounce 0.5s ease-in-out 3; }
+
+/* top phase bar */
+#phase-bar { height: 38px; background: rgba(18,18,31,.97); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; flex-shrink: 0; }
+.phase-label { font-family: 'Bebas Neue', cursive; font-size: 18px; letter-spacing: 3px; color: var(--accent); }
+#timer-display { font-family: 'Space Mono', monospace; font-size: 14px; color: white; }
+#timer-display.urgent { color: var(--danger); animation: pulse 0.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* writing area */
+#s-write { align-items: center; padding: 14px; gap: 10px; }
+.write-prompt { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; width: 100%; max-width: 680px; font-size: 14px; color: #ccc; font-style: italic; }
+.write-prompt strong { color: var(--accent); font-style: normal; font-family: 'Bebas Neue', cursive; font-size: 16px; letter-spacing: 2px; }
+#write-ta { width: 100%; max-width: 680px; flex: 1; background: var(--bg); border: 1px solid var(--border); color: white; padding: 14px; border-radius: 8px; font-size: 15px; line-height: 1.8; outline: none; resize: none; }
+#write-ta:focus { border-color: var(--primary); }
+.write-submit-btn { padding: 11px 36px; background: var(--primary); border: none; border-radius: 8px; color: white; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 3px; cursor: pointer; }
+.write-submit-btn:disabled { opacity: .4; cursor: default; }
+.write-wc { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+
+/* voting */
+#s-vote { padding: 14px; gap: 10px; overflow-y: auto; }
+.vote-title { font-family: 'Bebas Neue', cursive; font-size: 26px; letter-spacing: 4px; color: var(--accent); text-align: center; }
+.vote-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); text-align: center; letter-spacing: 2px; }
+.vote-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: border-color .15s, background .15s; }
+.vote-card:hover { border-color: var(--primary); }
+.vote-card.selected { border-color: var(--accent); background: rgba(232,255,0,.05); }
+.vote-card .vc-name { font-weight: 800; font-size: 13px; margin-bottom: 6px; color: var(--accent); }
+.vote-card .vc-text { font-size: 13px; color: #ccc; line-height: 1.7; }
+.vote-btn { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 8px; color: white; font-family: 'Bebas Neue', cursive; font-size: 20px; letter-spacing: 3px; cursor: pointer; }
+.vote-btn:disabled { opacity: .4; }
+#vote-timer { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--muted); text-align: center; }
+
+/* teacher judge screen */
+#s-judge { padding: 14px; gap: 10px; overflow-y: auto; }
+.judge-title { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 5px; color: var(--accent); text-align: center; }
+.judge-prompt-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #bbb; }
+.rep-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rep-card { background: var(--card); border: 2px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: border-color .15s; }
+.rep-card:hover { border-color: var(--primary); }
+.rep-card .rc-team { font-family: 'Bebas Neue', cursive; font-size: 18px; letter-spacing: 2px; margin-bottom: 4px; }
+.rep-card .rc-text { font-size: 12px; color: #aaa; line-height: 1.6; max-height: 80px; overflow: hidden; text-overflow: ellipsis; }
+.judge-btn { width: 100%; padding: 14px; background: #e8ff00; color: black; border: none; border-radius: 8px; font-family: 'Bebas Neue', cursive; font-size: 24px; letter-spacing: 4px; cursor: pointer; }
+.judge-btn:hover { opacity: .88; }
+.judge-btn:disabled { opacity: .4; cursor: default; }
+
+/* ─── WRITER AI overlay ─── */
+#writer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 900; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+#writer-box { background: var(--card); border: 2px solid var(--primary); border-radius: 16px; padding: 30px 24px; width: 340px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+/* Writer SVG character */
+#writer-char { position: relative; width: 80px; height: 80px; }
+@keyframes writerBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+#writer-char svg { animation: writerBob 2s ease-in-out infinite; }
+.writer-name { font-family: 'Bebas Neue', cursive; font-size: 20px; letter-spacing: 4px; color: var(--accent); }
+#writer-speech { font-size: 14px; color: #ddd; line-height: 1.6; min-height: 44px; font-style: italic; }
+.writer-thinking { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; }
+@keyframes thinkDot { 0%,100%{opacity:.2} 50%{opacity:1} }
+.think-dot { display: inline-block; }
+.think-dot:nth-child(1){animation:thinkDot 1.2s .0s infinite;}
+.think-dot:nth-child(2){animation:thinkDot 1.2s .3s infinite;}
+.think-dot:nth-child(3){animation:thinkDot 1.2s .6s infinite;}
+.writer-close { background: var(--primary); border: none; border-radius: 6px; color: white; padding: 8px 24px; font-family: 'Bebas Neue', cursive; font-size: 16px; letter-spacing: 2px; cursor: pointer; }
+
+/* ─── RESPONSE MODAL ─── */
+#resp-modal { position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 800; display: flex; align-items: center; justify-content: center; }
+#resp-modal-box { background: var(--card); border: 1px solid var(--primary); border-radius: 14px; padding: 22px; width: 360px; max-height: 80vh; overflow-y: auto; }
+.rm-team { font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 3px; margin-bottom: 8px; }
+.rm-text { font-size: 13px; line-height: 1.8; color: #ccc; }
+.rm-close { margin-top: 14px; width: 100%; padding: 9px; background: var(--primary); border: none; border-radius: 6px; color: white; font-family: 'Bebas Neue', cursive; font-size: 16px; letter-spacing: 2px; cursor: pointer; }
+
+/* ─── END SCREEN ─── */
+#s-end { align-items: center; justify-content: center; gap: 14px; padding: 24px; }
+.end-title { font-family: 'Bebas Neue', cursive; font-size: 52px; letter-spacing: 8px; color: var(--accent); text-align: center; }
+.end-winner { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 4px; text-align: center; }
+#end-scores { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 380px; }
+.end-row { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+.end-row .er-name { font-family: 'Bebas Neue', cursive; font-size: 20px; letter-spacing: 2px; }
+.end-row .er-pts { font-family: 'Space Mono', monospace; font-size: 14px; }
+.play-again-btn { padding: 12px 40px; background: var(--primary); border: none; border-radius: 8px; color: white; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 4px; cursor: pointer; }
+.play-again-btn:hover { opacity: .85; }
+
+/* Teacher prompt send */
+#s-send-prompt { align-items: center; justify-content: center; gap: 12px; padding: 24px; }
+.sp-title { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 4px; color: var(--accent); }
+.sp-ta { width: 100%; max-width: 480px; min-height: 100px; background: var(--bg); border: 1px solid var(--border); color: white; padding: 14px; border-radius: 8px; font-size: 14px; outline: none; resize: vertical; }
+.sp-ta:focus { border-color: var(--primary); }
+.sp-btn { padding: 12px 36px; background: var(--primary); border: none; border-radius: 8px; color: white; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 3px; cursor: pointer; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: #333; }
+
+/* team color map */
+.tc-0 { color: var(--t1); } .bc-0 { border-color: var(--t1); }
+.tc-1 { color: var(--t2); } .bc-1 { border-color: var(--t2); }
+.tc-2 { color: var(--t3); } .bc-2 { border-color: var(--t3); }
+.tc-3 { color: var(--t4); } .bc-3 { border-color: var(--t4); }
+</style>
+</head>
+<body>
+<div id="wrap">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="top-title">WRITE OR DROP</div>
+    <div class="top-right">
+      <span class="tb-pill" id="top-username"></span>
+      <button class="tb-btn hidden" id="btn-exit-game" onclick="exitGame()">EXIT</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: MENU -->
+  <div class="screen hidden" id="s-menu">
+    <div class="menu-logo">WRITE<br>OR<br>DROP</div>
+    <div class="menu-sub" id="menu-sub"></div>
+    <button class="menu-btn" onclick="goTeach()">TEACH</button>
+    <button class="menu-btn" onclick="goPlay()">PLAY</button>
+  </div>
+
+  <!-- SCREEN: SET USERNAME (student) -->
+  <div class="screen hidden" id="s-username">
+    <div class="un-title">YOUR NAME</div>
+    <input class="un-input" id="un-in" placeholder="Enter your username..." maxlength="18">
+    <div class="err-text" id="un-err"></div>
+    <button class="un-btn" onclick="submitUsername()">CONTINUE</button>
+  </div>
+
+  <!-- SCREEN: JOIN CODE (student) -->
+  <div class="screen hidden" id="s-join">
+    <div class="un-title" style="color:var(--accent)">ENTER CODE</div>
+    <input class="code-input" id="join-code" placeholder="000 000" maxlength="7" oninput="formatCode(this)">
+    <div class="err-text" id="join-err"></div>
+    <button class="un-btn" onclick="submitJoin()">JOIN</button>
+    <button class="tb-btn" style="margin-top:6px" onclick="showScreen('s-menu')">BACK</button>
+  </div>
+
+  <!-- SCREEN: STUDENT WAIT -->
+  <div class="screen hidden" id="s-student-wait">
+    <div style="font-size:60px">✏️</div>
+    <div class="sw-title">WAITING FOR HOST...</div>
+    <div class="mono" id="sw-team-label" style="font-size:11px;color:var(--muted);letter-spacing:2px;"></div>
+    <div class="mono" style="font-size:11px;color:var(--muted);margin-top:8px;">Get ready to write!</div>
+  </div>
+
+  <!-- SCREEN: TEACHER LOBBY -->
+  <div class="screen hidden" id="s-wait">
+    <div class="wait-label">ROOM CODE</div>
+    <div class="wait-code" id="room-code-display">000 000</div>
+    <div class="wait-label" style="margin-top:8px">PLAYERS JOINED</div>
+    <div id="wait-players"></div>
+    <button class="teach-go-btn" id="start-btn" onclick="teacherStartRound()">START GAME</button>
+  </div>
+
+  <!-- SCREEN: TEACHER SEND PROMPT -->
+  <div class="screen hidden" id="s-send-prompt">
+    <div class="sp-title">SEND A PROMPT</div>
+    <div class="mono" style="font-size:11px;color:var(--muted);text-align:center;">Players have 3 minutes to write once you send this.</div>
+    <textarea class="sp-ta" id="prompt-ta" placeholder="Write your prompt here..."></textarea>
+    <button class="sp-btn" onclick="teacherSendPrompt()">SEND PROMPT</button>
+  </div>
+
+  <!-- SCREEN: WRITING (student) -->
+  <div class="screen hidden" id="s-write" style="overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:680px;">
+      <div class="phase-label">WRITE!</div>
+      <div id="timer-display" style="font-family:'Space Mono',monospace;font-size:16px;">3:00</div>
+    </div>
+    <div class="write-prompt" id="write-prompt-box"><strong>PROMPT</strong><br><span id="write-prompt-text"></span></div>
+    <textarea class="screen" id="write-ta" style="width:100%;max-width:680px;min-height:200px;flex:1;background:var(--bg);border:1px solid var(--border);color:white;padding:14px;border-radius:8px;font-size:15px;line-height:1.8;outline:none;resize:none;" placeholder="Start writing..."></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:680px;">
+      <span class="write-wc" id="write-wc">0 words</span>
+      <button class="write-submit-btn" id="write-submit-btn" onclick="submitWriting()">SUBMIT</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: VOTING (student) -->
+  <div class="screen hidden" id="s-vote" style="display:flex;flex-direction:column;">
+    <div class="vote-title">TEAM VOTE</div>
+    <div class="vote-sub">PICK YOUR TEAM'S BEST RESPONSE (NOT YOURS)</div>
+    <div id="vote-timer" class="mono" style="font-size:13px;color:var(--muted);text-align:center;">20s</div>
+    <div id="vote-cards" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;padding-bottom:10px;"></div>
+    <button class="vote-btn" id="vote-submit-btn" onclick="submitVote()" disabled>VOTE</button>
+  </div>
+
+  <!-- SCREEN: TEACHER JUDGE -->
+  <div class="screen hidden" id="s-judge" style="display:flex;flex-direction:column;">
+    <div class="judge-title">JUDGE</div>
+    <div class="judge-prompt-box" id="judge-prompt-box"></div>
+    <div class="mono" style="font-size:10px;color:var(--muted);letter-spacing:2px;text-align:center;">CLICK A TEAM TO READ THEIR RESPONSE</div>
+    <div class="rep-cards" id="rep-cards"></div>
+    <button class="judge-btn" id="judge-btn" onclick="runJudge()">⚖️ JUDGE</button>
+    <div class="mono" id="judge-status" style="font-size:11px;color:var(--muted);text-align:center;min-height:16px;"></div>
+  </div>
+
+  <!-- SCREEN: ARENA (live scoreboard while judging plays out) -->
+  <div class="screen hidden" id="s-arena" style="display:flex;flex-direction:column;">
+    <div id="phase-bar">
+      <div class="phase-label" id="arena-phase">RESULTS</div>
+      <div id="arena-timer"></div>
+    </div>
+    <div id="arena-stage"></div>
+  </div>
+
+  <!-- SCREEN: END -->
+  <div class="screen hidden" id="s-end" style="display:flex;flex-direction:column;">
+    <div class="end-title">GAME OVER</div>
+    <div class="end-winner" id="end-winner"></div>
+    <div id="end-scores"></div>
+    <button class="play-again-btn" onclick="playAgain()">PLAY AGAIN</button>
+  </div>
+</div>
+
+<!-- WRITER OVERLAY -->
+<div id="writer-overlay" class="hidden">
+  <div id="writer-box">
+    <div class="writer-name">THE WRITER</div>
+    <div id="writer-char">
+      <svg viewBox="0 0 80 80" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+        <!-- body square -->
+        <rect x="10" y="16" width="60" height="56" rx="6" fill="#4834d4" stroke="#a29bfe" stroke-width="2"/>
+        <!-- eye square -->
+        <rect x="26" y="28" width="12" height="12" rx="2" fill="#e8ff00"/>
+        <rect x="42" y="28" width="12" height="12" rx="2" fill="#e8ff00"/>
+        <!-- smile half-circle -->
+        <path d="M 26 52 Q 40 66 54 52" stroke="#e8ff00" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <!-- arms -->
+        <rect x="0" y="30" width="12" height="6" rx="3" fill="#4834d4" stroke="#a29bfe" stroke-width="1.5"/>
+        <rect x="68" y="30" width="12" height="6" rx="3" fill="#4834d4" stroke="#a29bfe" stroke-width="1.5"/>
+        <!-- legs -->
+        <rect x="22" y="70" width="10" height="10" rx="3" fill="#4834d4" stroke="#a29bfe" stroke-width="1.5"/>
+        <rect x="48" y="70" width="10" height="10" rx="3" fill="#4834d4" stroke="#a29bfe" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div class="writer-thinking hidden" id="writer-thinking">
+      thinking<span class="think-dot">.</span><span class="think-dot">.</span><span class="think-dot">.</span>
+    </div>
+    <div id="writer-speech"></div>
+    <button class="writer-close hidden" id="writer-close-btn" onclick="closeWriter()">CONTINUE</button>
+  </div>
+</div>
+
+<!-- RESPONSE MODAL -->
+<div id="resp-modal" class="hidden">
+  <div id="resp-modal-box">
+    <div class="rm-team" id="rm-team"></div>
+    <div class="rm-text" id="rm-text"></div>
+    <button class="rm-close" onclick="closeRespModal()">CLOSE</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  FIREBASE CONFIG  – replace with your own project!
+// ══════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDEMO_REPLACE_WITH_YOUR_KEY",
+  authDomain: "your-project.firebaseapp.com",
+  databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+  projectId: "your-project",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:0000000000000000"
+};
+
+// ──────────────────────────────────────────────────────
+// DEMO MODE: uses localStorage to simulate multiplayer
+// when Firebase is not configured. Great for GitHub Pages!
+// ──────────────────────────────────────────────────────
+let DEMO_MODE = true; // set false if you add a real Firebase config above
+
+let db = null;
+try {
+  if (!DEMO_MODE) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  }
+} catch(e){ DEMO_MODE = true; }
+
+const GROQ_API_KEY = 'api: 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';
+
+// ══════════════════════════════════════════════════════
+//  TEAMS CONFIG
+// ══════════════════════════════════════════════════════
+const TEAMS = [
+  { id: 0, name: "The Dashers",   icon: "icons/dash.png",     color: "var(--t1)" },
+  { id: 1, name: "The Clashers",  icon: "icons/clash.png",    color: "var(--t2)" },
+  { id: 2, name: "The Blockboys", icon: "icons/blockboy.png", color: "var(--t3)" },
+  { id: 3, name: "The Coders",    icon: "icons/coders.png",   color: "var(--t4)" }
+];
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let state = {
+  role: null,       // 'teacher' | 'student'
+  username: null,
+  roomCode: null,
+  teamId: null,
+  phase: 'menu',    // menu|lobby|prompt|write|vote|judge|results|end
+  prompt: '',
+  scores: [3, 3, 3, 3],
+  eliminated: [false,false,false,false],
+  submissions: {},  // uid -> text
+  teamVotes: {},    // teamId -> winnerUid
+  roundNum: 0,
+  writeTimer: null,
+  voteTimer: null,
+  selectedVote: null,
+  hasVoted: false,
+  hasWritten: false,
+};
+
+// For demo mode – shared via localStorage
+const LS_KEY = () => `wod_room_${state.roomCode}`;
+
+function lsGet() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY()) || 'null'); } catch { return null; }
+}
+function lsSet(data) {
+  localStorage.setItem(LS_KEY(), JSON.stringify(data));
+}
+function lsMerge(patch) {
+  const d = lsGet() || {};
+  Object.assign(d, patch);
+  lsSet(d);
+}
+
+// ══════════════════════════════════════════════════════
+//  SCREEN ROUTING
+// ══════════════════════════════════════════════════════
+const SCREENS = ['s-menu','s-username','s-join','s-wait','s-student-wait','s-write','s-vote','s-judge','s-arena','s-end','s-send-prompt'];
+
+function showScreen(id) {
+  SCREENS.forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.classList.add('hidden');
+  });
+  const target = document.getElementById(id);
+  if (target) {
+    target.classList.remove('hidden');
+    target.style.display = 'flex';
+  }
+  document.getElementById('btn-exit-game').classList.toggle('hidden', id === 's-menu');
+  if (id === 's-menu') {
+    const el = document.getElementById('menu-sub');
+    if (el) el.textContent = TAGLINES[Math.floor(Math.random()*TAGLINES.length)];
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+window.onload = () => {
+  showScreen('s-menu');
+  document.getElementById('write-ta').addEventListener('input', () => {
+    const words = document.getElementById('write-ta').value.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('write-wc').textContent = words + ' word' + (words!==1?'s':'');
+  });
+};
+
+function exitGame() {
+  clearTimers();
+  state = { role:null, username:null, roomCode:null, teamId:null, phase:'menu', prompt:'', scores:[3,3,3,3], eliminated:[false,false,false,false], submissions:{}, teamVotes:{}, roundNum:0, writeTimer:null, voteTimer:null, selectedVote:null, hasVoted:false, hasWritten:false };
+  showScreen('s-menu');
+}
+
+function clearTimers() {
+  if (state.writeTimer) clearInterval(state.writeTimer);
+  if (state.voteTimer) clearInterval(state.voteTimer);
+}
+
+// ══════════════════════════════════════════════════════
+//  MENU
+// ══════════════════════════════════════════════════════
+function goTeach() {
+  state.role = 'teacher';
+  state.username = 'Teacher';
+  document.getElementById('top-username').textContent = 'TEACHER';
+  // Generate random room code
+  const code = String(Math.floor(Math.random() * 1000000)).padStart(6,'0');
+  state.roomCode = code;
+  const display = code.slice(0,3) + ' ' + code.slice(3);
+  document.getElementById('room-code-display').textContent = display;
+  document.getElementById('wait-players').innerHTML = '';
+
+  if (DEMO_MODE) {
+    lsSet({ code, players:{}, phase:'lobby', scores:[3,3,3,3], eliminated:[false,false,false,false], roundNum:0, submissions:{}, teamVotes:{}, prompt:'' });
+    // Poll for player joins
+    startTeacherPoll();
+  } else {
+    db.ref('rooms/' + code).set({ phase:'lobby', scores:[3,3,3,3], eliminated:[false,false,false,false], roundNum:0 });
+    db.ref('rooms/' + code + '/players').on('value', snap => updateWaitingList(snap.val() || {}));
+  }
+  showScreen('s-wait');
+}
+
+function goPlay() {
+  showScreen('s-username');
+}
+
+// ══════════════════════════════════════════════════════
+//  USERNAME
+// ══════════════════════════════════════════════════════
+function submitUsername() {
+  const val = document.getElementById('un-in').value.trim();
+  if (!val || val.length < 2) { document.getElementById('un-err').textContent = 'Name must be at least 2 characters.'; return; }
+  state.username = val;
+  document.getElementById('top-username').textContent = val.toUpperCase();
+  document.getElementById('un-err').textContent = '';
+  showScreen('s-join');
+}
+
+// ══════════════════════════════════════════════════════
+//  JOIN CODE
+// ══════════════════════════════════════════════════════
+function formatCode(el) {
+  let v = el.value.replace(/\D/g,'');
+  if (v.length > 6) v = v.slice(0,6);
+  el.value = v.length > 3 ? v.slice(0,3)+' '+v.slice(3) : v;
+}
+
+function submitJoin() {
+  const raw = document.getElementById('join-code').value.replace(/\s/g,'');
+  if (raw.length !== 6) { document.getElementById('join-err').textContent = 'Code must be 6 digits.'; return; }
+
+  if (DEMO_MODE) {
+    state.roomCode = raw;
+    const room = lsGet();
+    if (!room || room.phase !== 'lobby') {
+      document.getElementById('join-err').textContent = 'This code is invalid.';
+      return;
+    }
+    // Assign team (round robin by player count)
+    const playerCount = Object.keys(room.players || {}).length;
+    const teamId = playerCount % 4;
+    state.teamId = teamId;
+    const uid = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    state.uid = uid;
+    const players = room.players || {};
+    players[uid] = { name: state.username, team: teamId };
+    lsMerge({ players });
+    document.getElementById('sw-team-label').textContent = 'YOU ARE ON: ' + TEAMS[teamId].name.toUpperCase();
+    startStudentPoll();
+    showScreen('s-student-wait');
+  } else {
+    db.ref('rooms/' + raw).once('value', snap => {
+      if (!snap.exists() || snap.val().phase !== 'lobby') {
+        document.getElementById('join-err').textContent = 'This code is invalid.';
+        return;
+      }
+      state.roomCode = raw;
+      db.ref('rooms/' + raw + '/players').once('value', ps => {
+        const count = ps.val() ? Object.keys(ps.val()).length : 0;
+        const teamId = count % 4;
+        state.teamId = teamId;
+        const uid = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
+        state.uid = uid;
+        db.ref('rooms/' + raw + '/players/' + uid).set({ name: state.username, team: teamId });
+        document.getElementById('sw-team-label').textContent = 'YOU ARE ON: ' + TEAMS[teamId].name.toUpperCase();
+        startStudentPoll();
+        showScreen('s-student-wait');
+      });
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  TEACHER POLL (demo mode)
+// ══════════════════════════════════════════════════════
+let teacherPollInterval = null;
+function startTeacherPoll() {
+  if (teacherPollInterval) clearInterval(teacherPollInterval);
+  teacherPollInterval = setInterval(() => {
+    const room = lsGet();
+    if (!room) return;
+    updateWaitingList(room.players || {});
+    // handle phase transitions teacher-side
+    if (room.phase === 'voting' && state.phase !== 'vote-waiting') {
+      state.phase = 'vote-waiting';
+      // teacher doesn't vote, waits for voting to end, then judge phase
+      const waitForVotesDone = setInterval(() => {
+        const r = lsGet();
+        if (!r) return;
+        if (r.phase === 'judge') {
+          clearInterval(waitForVotesDone);
+          loadJudgeScreen(r);
+        }
+      }, 1000);
+    }
+  }, 800);
+}
+
+// ══════════════════════════════════════════════════════
+//  STUDENT POLL
+// ══════════════════════════════════════════════════════
+let studentPollInterval = null;
+function startStudentPoll() {
+  if (studentPollInterval) clearInterval(studentPollInterval);
+  studentPollInterval = setInterval(() => {
+    const room = lsGet();
+    if (!room) return;
+    const phase = room.phase;
+    if (phase === 'writing' && state.phase !== 'writing') {
+      state.phase = 'writing';
+      state.prompt = room.prompt || '';
+      startWritingPhase();
+    } else if (phase === 'voting' && state.phase !== 'voting' && state.phase !== 'voted') {
+      state.phase = 'voting';
+      startVotingPhase(room);
+    } else if (phase === 'results' && state.phase !== 'results') {
+      state.phase = 'results';
+      showResultsArena(room);
+    } else if (phase === 'end' && state.phase !== 'end') {
+      state.phase = 'end';
+      showEndScreen(room);
+    } else if (phase === 'lobby' && state.phase === 'results') {
+      state.phase = 'lobby-wait';
+      showScreen('s-student-wait');
+      document.getElementById('sw-team-label').textContent = 'NEXT ROUND STARTING...';
+    }
+  }, 800);
+}
+
+// ══════════════════════════════════════════════════════
+//  WAITING LIST
+// ══════════════════════════════════════════════════════
+function updateWaitingList(players) {
+  const el = document.getElementById('wait-players');
+  el.innerHTML = '';
+  const sorted = Object.values(players || {}).sort((a,b) => a.team - b.team);
+  sorted.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'wait-prow';
+    row.innerHTML = `<div class="wait-dot"></div><span style="flex:1;font-weight:700">${p.name}</span><span class="mono tc-${p.team}" style="font-size:10px;letter-spacing:2px">${TEAMS[p.team].name.toUpperCase()}</span>`;
+    el.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  TEACHER – START GAME
+// ══════════════════════════════════════════════════════
+function teacherStartRound() {
+  if (teacherPollInterval) clearInterval(teacherPollInterval);
+  showScreen('s-send-prompt');
+}
+
+function teacherSendPrompt() {
+  const prompt = document.getElementById('prompt-ta').value.trim();
+  if (!prompt) return;
+  state.prompt = prompt;
+
+  if (DEMO_MODE) {
+    lsMerge({ phase:'writing', prompt, submissions:{}, teamVotes:{} });
+  } else {
+    db.ref('rooms/' + state.roomCode).update({ phase:'writing', prompt, submissions:{}, teamVotes:{} });
+  }
+  startWritingPhaseTeacher(prompt);
+}
+
+function startWritingPhaseTeacher(prompt) {
+  // Teacher watches for voting phase
+  showScreen('s-arena');
+  buildArena();
+  document.getElementById('arena-phase').textContent = 'WRITING IN PROGRESS';
+
+  let secs = 180;
+  const arenaTimer = document.getElementById('arena-timer');
+  const ti = setInterval(() => {
+    secs--;
+    arenaTimer.textContent = formatTime(secs);
+    if (secs <= 0) {
+      clearInterval(ti);
+      // move to voting automatically
+      if (DEMO_MODE) {
+        lsMerge({ phase:'voting', voteStart: Date.now() });
+      }
+    }
+  }, 1000);
+
+  // Watch for judge phase
+  const waitJ = setInterval(() => {
+    const r = lsGet();
+    if (!r) return;
+    if (r.phase === 'judge') {
+      clearInterval(waitJ);
+      clearInterval(ti);
+      loadJudgeScreen(r);
+    }
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════════════
+//  STUDENT – WRITING PHASE
+// ══════════════════════════════════════════════════════
+function startWritingPhase() {
+  state.hasWritten = false;
+  document.getElementById('write-prompt-text').textContent = state.prompt;
+  document.getElementById('write-ta').value = '';
+  document.getElementById('write-ta').disabled = false;
+  document.getElementById('write-submit-btn').disabled = false;
+  showScreen('s-write');
+
+  let secs = 180;
+  const td = document.getElementById('timer-display');
+  td.className = '';
+  state.writeTimer = setInterval(() => {
+    secs--;
+    td.textContent = formatTime(secs);
+    if (secs <= 30) td.classList.add('urgent');
+    if (secs <= 0) {
+      clearInterval(state.writeTimer);
+      autoSubmitWriting();
+    }
+  }, 1000);
+}
+
+function submitWriting() {
+  if (state.hasWritten) return;
+  const text = document.getElementById('write-ta').value.trim();
+  if (!text) return;
+  clearInterval(state.writeTimer);
+  state.hasWritten = true;
+  document.getElementById('write-ta').disabled = true;
+  document.getElementById('write-submit-btn').disabled = true;
+
+  const room = lsGet();
+  const subs = room.submissions || {};
+  subs[state.uid] = { text, team: state.teamId, name: state.username };
+  if (DEMO_MODE) lsMerge({ submissions: subs });
+
+  showScreen('s-student-wait');
+  document.getElementById('sw-team-label').textContent = 'WAITING FOR OTHERS TO FINISH...';
+  state.phase = 'written';
+}
+
+function autoSubmitWriting() {
+  if (state.hasWritten) return;
+  const text = document.getElementById('write-ta').value.trim() || '[No response submitted]';
+  state.hasWritten = true;
+  const room = lsGet();
+  const subs = room.submissions || {};
+  subs[state.uid] = { text, team: state.teamId, name: state.username };
+  if (DEMO_MODE) lsMerge({ submissions: subs });
+
+  showScreen('s-student-wait');
+  document.getElementById('sw-team-label').textContent = 'TIME\'S UP! VOTING SOON...';
+  state.phase = 'written';
+}
+
+// ══════════════════════════════════════════════════════
+//  VOTING PHASE
+// ══════════════════════════════════════════════════════
+function startVotingPhase(room) {
+  state.hasVoted = false;
+  state.selectedVote = null;
+  const subs = room.submissions || {};
+
+  // Get teammates (same team, not self)
+  const teammates = Object.entries(subs).filter(([uid, s]) => s.team === state.teamId && uid !== state.uid);
+
+  const cardsEl = document.getElementById('vote-cards');
+  cardsEl.innerHTML = '';
+
+  if (teammates.length === 0) {
+    // No teammates to vote on – auto-advance
+    const mySub = subs[state.uid];
+    if (mySub) {
+      const votes = room.teamVotes || {};
+      votes[state.teamId] = { uid: state.uid, text: mySub.text, name: mySub.name };
+      if (DEMO_MODE) {
+        lsMerge({ teamVotes: votes });
+        checkVotingDone();
+      }
+    }
+    state.phase = 'voted';
+    showScreen('s-student-wait');
+    document.getElementById('sw-team-label').textContent = 'VOTE SUBMITTED!';
+    return;
+  }
+
+  teammates.forEach(([uid, sub]) => {
+    const card = document.createElement('div');
+    card.className = 'vote-card';
+    card.innerHTML = `<div class="vc-name">${sub.name}</div><div class="vc-text">${sub.text.slice(0,300)}${sub.text.length>300?'...':''}</div>`;
+    card.onclick = () => {
+      document.querySelectorAll('.vote-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.selectedVote = { uid, text: sub.text, name: sub.name };
+      document.getElementById('vote-submit-btn').disabled = false;
+    };
+    cardsEl.appendChild(card);
+  });
+
+  showScreen('s-vote');
+
+  let secs = 20;
+  state.voteTimer = setInterval(() => {
+    secs--;
+    document.getElementById('vote-timer').textContent = secs + 's';
+    if (secs <= 0) {
+      clearInterval(state.voteTimer);
+      autoSubmitVote(subs);
+    }
+  }, 1000);
+}
+
+function submitVote() {
+  if (!state.selectedVote || state.hasVoted) return;
+  clearInterval(state.voteTimer);
+  state.hasVoted = true;
+  document.getElementById('vote-submit-btn').disabled = true;
+
+  const room = lsGet();
+  const votes = room.teamVotes || {};
+  votes[state.teamId] = { uid: state.selectedVote.uid, text: state.selectedVote.text, name: state.selectedVote.name };
+  if (DEMO_MODE) {
+    lsMerge({ teamVotes: votes });
+    checkVotingDone();
+  }
+  state.phase = 'voted';
+  showScreen('s-student-wait');
+  document.getElementById('sw-team-label').textContent = 'VOTE SUBMITTED!';
+}
+
+function autoSubmitVote(subs) {
+  if (state.hasVoted) return;
+  // pick first teammate or self
+  const teammates = Object.entries(subs).filter(([uid, s]) => s.team === state.teamId && uid !== state.uid);
+  const pick = teammates[0] || Object.entries(subs).find(([uid, s]) => s.team === state.teamId);
+  if (pick) {
+    state.selectedVote = { uid: pick[0], text: pick[1].text, name: pick[1].name };
+  }
+  submitVote();
+}
+
+function checkVotingDone() {
+  // Check if all active teams have voted
+  setTimeout(() => {
+    const room = lsGet();
+    if (!room) return;
+    const activeTeams = TEAMS.filter((t,i) => !room.eliminated[i]);
+    const votes = room.teamVotes || {};
+    const votedTeams = Object.keys(votes).map(Number);
+    const allVoted = activeTeams.every(t => votedTeams.includes(t.id));
+    if (allVoted) {
+      lsMerge({ phase: 'judge' });
+    }
+  }, 500);
+}
+
+// ══════════════════════════════════════════════════════
+//  JUDGE SCREEN (teacher)
+// ══════════════════════════════════════════════════════
+function loadJudgeScreen(room) {
+  showScreen('s-judge');
+  document.getElementById('judge-prompt-box').textContent = room.prompt || state.prompt;
+  document.getElementById('judge-status').textContent = '';
+  document.getElementById('judge-btn').disabled = false;
+
+  const cardsEl = document.getElementById('rep-cards');
+  cardsEl.innerHTML = '';
+  const votes = room.teamVotes || {};
+  const elim = room.eliminated || [false,false,false,false];
+
+  TEAMS.forEach(t => {
+    if (elim[t.id]) return;
+    const v = votes[t.id];
+    const card = document.createElement('div');
+    card.className = `rep-card bc-${t.id}`;
+    card.innerHTML = `
+      <div class="rc-team tc-${t.id}">${t.name.toUpperCase()}</div>
+      <div class="rc-text">${v ? v.text.slice(0,180)+'...' : '[No submission]'}</div>
+    `;
+    card.onclick = () => openRespModal(t.name, v ? v.text : '[No submission]', t.id);
+    cardsEl.appendChild(card);
+  });
+}
+
+function openRespModal(teamName, text, teamId) {
+  document.getElementById('rm-team').textContent = teamName.toUpperCase();
+  document.getElementById('rm-team').className = `rm-team tc-${teamId}`;
+  document.getElementById('rm-text').textContent = text;
+  document.getElementById('resp-modal').classList.remove('hidden');
+}
+
+function closeRespModal() {
+  document.getElementById('resp-modal').classList.add('hidden');
+}
+
+// ══════════════════════════════════════════════════════
+//  WRITER AI JUDGE
+// ══════════════════════════════════════════════════════
+async function runJudge() {
+  document.getElementById('judge-btn').disabled = true;
+  document.getElementById('judge-status').textContent = 'The Writer is reading...';
+  const room = lsGet();
+  const votes = room.teamVotes || {};
+  const prompt = room.prompt || state.prompt;
+  const elim = room.eliminated || [false,false,false,false];
+
+  const teamResponses = TEAMS.filter((t,i) => !elim[i] && votes[t.id]).map(t => ({
+    team: t.name,
+    id: t.id,
+    text: votes[t.id].text
+  }));
+
+  if (teamResponses.length < 2) {
+    document.getElementById('judge-status').textContent = 'Not enough responses to judge.';
+    return;
+  }
+
+  showWriterThinking();
+
+  const systemPrompt = `You are "The Writer", a strict but fair AI judge for a classroom writing game called Write Or Drop. 
+Your job: given a prompt and several team responses, rank them from best to worst, and give a SHORT fun comment about each.
+
+Scoring rubric:
+- gibberish (like "thjaitohjatiohjath"): grade as "gibberish"
+- bad: off-topic, very poor writing
+- average: on-topic but basic
+- good: well-written, clear
+- great: excellent, detailed, creative
+
+Respond ONLY in this JSON format (no markdown, no extra text):
+{
+  "ranking": ["Team Name 1 (best)", "Team Name 2", ..., "Team Name N (worst)"],
+  "grades": {"Team Name": "gibberish|bad|average|good|great"},
+  "comments": {"Team Name": "short comment 1 sentence"}
+}`;
+
+  const userMsg = `PROMPT: "${prompt}"\n\nTEAM RESPONSES:\n` + teamResponses.map(t => `${t.team}: "${t.text}"`).join('\n\n');
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      body: JSON.stringify({
+        model: 'llama3-70b-8192',
+        max_tokens: 1000,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMsg }
+        ]
+      })
+    });
+    const data = await resp.json();
+    let raw = data.choices[0].message.content;
+    raw = raw.replace(/```json|```/g,'').trim();
+    const result = JSON.parse(raw);
+    hideWriterThinking();
+    applyJudgeResult(result, teamResponses, room);
+  } catch(e) {
+    hideWriterThinking();
+    // Fallback: random judge
+    const shuffled = [...teamResponses].sort(() => Math.random() - .5);
+    const fallback = {
+      ranking: shuffled.map(t => t.team),
+      grades: Object.fromEntries(shuffled.map(t => [t.team, 'average'])),
+      comments: Object.fromEntries(shuffled.map(t => [t.team, 'Hmm, interesting...']))
+    };
+    applyJudgeResult(fallback, teamResponses, room);
+  }
+}
+
+function applyJudgeResult(result, teamResponses, room) {
+  const ranking = result.ranking;
+  const best = ranking[0];
+  const worst = ranking[ranking.length - 1];
+  const bestTeam = TEAMS.find(t => t.name === best);
+  const worstTeam = TEAMS.find(t => t.name === worst);
+
+  // Update scores
+  const scores = room.scores || [3,3,3,3];
+  const elim = room.eliminated || [false,false,false,false];
+
+  if (bestTeam) scores[bestTeam.id] = (scores[bestTeam.id] || 3) + 1;
+  if (worstTeam) scores[worstTeam.id] = Math.max(0, (scores[worstTeam.id] || 3) - 1);
+
+  // Elimination check
+  TEAMS.forEach(t => {
+    if (scores[t.id] < 1) elim[t.id] = true;
+  });
+
+  const activeTeams = TEAMS.filter(t => !elim[t.id]);
+  let phase = activeTeams.length <= 1 ? 'end' : 'results';
+
+  if (DEMO_MODE) {
+    lsMerge({ scores, eliminated: elim, phase, judgeResult: result, bestTeam: bestTeam?.id, worstTeam: worstTeam?.id });
+  }
+
+  // Show writer sayings per team, then arena
+  showWriterResults(result, teamResponses, bestTeam, worstTeam, () => {
+    showResultsArena({ scores, eliminated: elim, phase, judgeResult: result, bestTeam: bestTeam?.id, worstTeam: worstTeam?.id });
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  WRITER OVERLAY LOGIC
+// ══════════════════════════════════════════════════════
+const WRITER_LINES = {
+  gibberish: ["Uhh. What?","I appreciate the effort, I guess?","We talked about this.","If you say so.."],
+  bad: ["This one could use some work.","You should practice more.","You were good, I'm waiting for you to be great.","Not quite there yet, but pretty good try."],
+  average: ["Yeah, this works.","Pretty easy to follow, nice job!","This is coherent, nice.","This gets the point across.","Really solid, just needs some more detail."],
+  good: ["Good job, this is above-average!","I like the way you structured this.","Well put together! Good job.","This is really strong!"],
+  great: ["This is clear, easy to follow, and has detail!!! Bravo, [teamname]!","My quadrilateral eyes have been given a spark of joy for the first time. Thank you, [teamname].","Did shakespeare copy you? Because this is AMAZING."]
+};
+
+function getWriterLine(grade, teamName) {
+  const pool = WRITER_LINES[grade] || WRITER_LINES['average'];
+  const line = pool[Math.floor(Math.random() * pool.length)];
+  return line.replace('[teamname]', teamName);
+}
+
+function showWriterThinking() {
+  document.getElementById('writer-overlay').classList.remove('hidden');
+  document.getElementById('writer-thinking').classList.remove('hidden');
+  document.getElementById('writer-speech').textContent = '';
+  document.getElementById('writer-close-btn').classList.add('hidden');
+}
+
+function hideWriterThinking() {
+  document.getElementById('writer-thinking').classList.add('hidden');
+}
+
+let writerQueue = [];
+function showWriterResults(result, teamResponses, bestTeam, worstTeam, onDone) {
+  document.getElementById('writer-overlay').classList.remove('hidden');
+  document.getElementById('writer-thinking').classList.add('hidden');
+  document.getElementById('writer-close-btn').classList.remove('hidden');
+
+  writerQueue = teamResponses.map(t => ({
+    teamName: t.team,
+    grade: result.grades[t.team] || 'average',
+    comment: result.comments[t.team] || 'Hmm...'
+  }));
+  writerQueue.push({ _done: true, onDone });
+  nextWriterLine();
+}
+
+function nextWriterLine() {
+  if (!writerQueue.length) { closeWriter(); return; }
+  const item = writerQueue.shift();
+  if (item._done) { closeWriter(); item.onDone && item.onDone(); return; }
+
+  const line = getWriterLine(item.grade, item.teamName);
+  document.getElementById('writer-speech').innerHTML = `<strong style="color:var(--accent);font-family:'Bebas Neue',cursive;letter-spacing:2px;font-size:15px">${item.teamName.toUpperCase()}</strong><br><em style="color:#aaa;font-size:11px;font-family:'Space Mono',monospace;">[${item.grade}]</em><br><br>${line}`;
+  document.getElementById('writer-close-btn').textContent = writerQueue.length === 1 ? 'FINISH' : 'NEXT';
+}
+
+function closeWriter() {
+  document.getElementById('writer-overlay').classList.add('hidden');
+  writerQueue = [];
+}
+
+// ══════════════════════════════════════════════════════
+//  ARENA / RESULTS
+// ══════════════════════════════════════════════════════
+function buildArena(scores, eliminated, bestId, worstId) {
+  const stage = document.getElementById('arena-stage');
+  stage.innerHTML = '';
+  const sc = scores || [3,3,3,3];
+  const el = eliminated || [false,false,false,false];
+
+  TEAMS.forEach(t => {
+    const panel = document.createElement('div');
+    panel.className = 'team-panel' + (el[t.id] ? ' eliminated' : '');
+    panel.id = 'team-panel-' + t.id;
+    panel.style.borderColor = el[t.id] ? '#333' : ['#ff6b6b','#ffa502','#2ed573','#70a1ff'][t.id];
+
+    // hearts
+    const hearts = Array(3).fill(0).map((_,i) => `<span class="pt-heart ${i < sc[t.id] ? '' : 'empty'}"></span>`).join('');
+
+    panel.innerHTML = `
+      <img class="team-icon" src="${t.icon}" alt="${t.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="team-icon-fallback" style="display:none;font-size:36px">${['🏃','💥','🧱','💻'][t.id]}</div>
+      <div class="team-name" style="color:${['#ff6b6b','#ffa502','#2ed573','#70a1ff'][t.id]}">${t.name.toUpperCase()}</div>
+      <div class="team-pts">${hearts}</div>
+      <div class="mono" style="font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:2px;">${el[t.id]?'ELIMINATED':sc[t.id]+' PTS'}</div>
+    `;
+    stage.appendChild(panel);
+  });
+
+  if (worstId !== undefined && worstId !== null) {
+    setTimeout(() => {
+      const p = document.getElementById('team-panel-' + worstId);
+      if (p) p.classList.add('dropping', 'worst-glow');
+    }, 400);
+  }
+  if (bestId !== undefined && bestId !== null) {
+    setTimeout(() => {
+      const p = document.getElementById('team-panel-' + bestId);
+      if (p) p.classList.add('best-glow', 'best-anim');
+    }, 400);
+  }
+}
+
+function showResultsArena(room) {
+  showScreen('s-arena');
+  const sc = room.scores || [3,3,3,3];
+  const el = room.eliminated || [false,false,false,false];
+  buildArena(sc, el, room.bestTeam, room.worstTeam);
+  document.getElementById('arena-phase').textContent = 'ROUND RESULTS';
+  document.getElementById('arena-timer').textContent = '';
+
+  if (room.phase === 'end') {
+    setTimeout(() => showEndScreen(room), 3500);
+  } else {
+    // Teacher: show next round button
+    if (state.role === 'teacher') {
+      setTimeout(() => {
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'teach-go-btn';
+        nextBtn.textContent = 'NEXT ROUND';
+        nextBtn.style.margin = '12px auto';
+        nextBtn.onclick = startNextRound;
+        document.getElementById('arena-stage').appendChild(nextBtn);
+      }, 2000);
+    }
+  }
+}
+
+function startNextRound() {
+  const room = lsGet();
+  const sc = room.scores || [3,3,3,3];
+  const el = room.eliminated || [false,false,false,false];
+  if (DEMO_MODE) {
+    lsMerge({ phase:'lobby', roundNum:(room.roundNum||0)+1, submissions:{}, teamVotes:{}, prompt:'', judgeResult:null, bestTeam:null, worstTeam:null });
+  }
+  showScreen('s-send-prompt');
+  document.getElementById('prompt-ta').value = '';
+  startTeacherPoll();
+}
+
+// ══════════════════════════════════════════════════════
+//  END SCREEN
+// ══════════════════════════════════════════════════════
+function showEndScreen(room) {
+  showScreen('s-end');
+  const sc = room.scores || [3,3,3,3];
+  const el = room.eliminated || [false,false,false,false];
+
+  const active = TEAMS.filter(t => !el[t.id]).sort((a,b) => sc[b.id]-sc[a.id]);
+  const winner = active[0] || TEAMS[0];
+
+  document.getElementById('end-winner').textContent = '🏆 ' + winner.name.toUpperCase() + ' WINS!';
+  document.getElementById('end-winner').style.color = ['#ff6b6b','#ffa502','#2ed573','#70a1ff'][winner.id];
+
+  const scoresEl = document.getElementById('end-scores');
+  scoresEl.innerHTML = '';
+  const sorted = [...TEAMS].sort((a,b) => sc[b.id]-sc[a.id]);
+  sorted.forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'end-row';
+    row.innerHTML = `<span class="er-name tc-${t.id}">${t.name}</span><span class="er-pts mono" style="color:${el[t.id]?'var(--muted)':'white'}">${el[t.id]?'ELIMINATED':sc[t.id]+' pts'}</span>`;
+    scoresEl.appendChild(row);
+  });
+}
+
+function playAgain() {
+  if (state.role === 'teacher') {
+    const room = lsGet();
+    const el = [false,false,false,false];
+    if (DEMO_MODE) {
+      lsMerge({ phase:'lobby', scores:[3,3,3,3], eliminated:el, roundNum:0, submissions:{}, teamVotes:{}, judgeResult:null });
+    }
+    showScreen('s-wait');
+    startTeacherPoll();
+  } else {
+    showScreen('s-student-wait');
+    document.getElementById('sw-team-label').textContent = 'WAITING FOR NEXT GAME...';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════
+function formatTime(s) {
+  return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);
+}
+
+// ── TAGLINES ──
+const TAGLINES = [
+  'Did you know #1: The common word "Meh" was popularized by The Simpsons, S6 E5?',
+  'Creeper? Awww man.',
+  'sudo make me write better',
+  "You know, I'm something of a scientist myself.",
+  'Have YOU actually ever met anyone named McLovin!?!?',
+  '| ||\n|| |_',
+  'Did you know #2: Orcas ACTIVELY hunt moose.',
+  'Did you know #3: Sloths can hold their breaths longer than dolphins.',
+  'UNEXCEPTABLEEEEEEEEEEEEEEEE',
+  'With great power comes great responsibility.',
+  'Jason? Jason. JASON!',
+  'Omelette du fromage.',
+  'Cake will be available at the conclusion of the game.',
+  'The cake is a lie.',
+  'sippin on the dr. p soda. so soda',
+  "Mom's spaghetti.",
+  'oh my gosh they were roomates',
+  "Look folks, this stainless steel signature-edition blade will cut through anything. But it's not gonna stick around long at the nice price of $19.99, so call in right now and get cutting!",
+  'How do I get rid of 30-50 feral hogs?',
+  'Did you know #4: Giraffes are more likely to get struck by lightning than any other animal.',
+];
+(function setTagline(){
+  const el = document.getElementById('menu-sub');
+  if(!el) return;
+  el.textContent = TAGLINES[Math.floor(Math.random()*TAGLINES.length)];
+})();
+
+// init
+showScreen('s-menu');
+</script>
+</body>
+</html>
