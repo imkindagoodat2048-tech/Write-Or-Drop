@@ -617,7 +617,7 @@ function startStudentPoll() {
     const room = lsGet();
     if (!room) return;
     const phase = room.phase;
-    if (phase === 'writing' && state.phase !== 'writing') {
+    if (phase === 'writing' && state.phase !== 'writing' && state.phase !== 'written') {
       state.phase = 'writing';
       state.prompt = room.prompt || '';
       startWritingPhase();
@@ -739,17 +739,19 @@ function submitWriting() {
 }
 
 function autoSubmitWriting() {
-  if (state.hasWritten) return;
-  const text = document.getElementById('write-ta').value.trim() || '[No response submitted]';
-  state.hasWritten = true;
-  const room = lsGet();
-  const subs = room.submissions || {};
-  subs[state.uid] = { text, team: state.teamId, name: state.username };
-  if (DEMO_MODE) lsMerge({ submissions: subs });
-
-  showScreen('s-student-wait');
-  document.getElementById('sw-team-label').textContent = 'TIME\'S UP! VOTING SOON...';
+  // Save anything still in the box when time runs out
+  const text = document.getElementById('write-ta').value.trim();
+  if (text) {
+    const room = lsGet();
+    const subs = room.submissions || {};
+    const attemptKey = state.uid + '_' + (state.submitCount || 0);
+    subs[attemptKey] = { text, team: state.teamId, name: state.username };
+    state.submitCount = (state.submitCount || 0) + 1;
+    if (DEMO_MODE) lsMerge({ submissions: subs });
+  }
   state.phase = 'written';
+  showScreen('s-student-wait');
+  document.getElementById('sw-team-label').textContent = "TIME\'S UP! VOTING SOON...";
 }
 
 // ══════════════════════════════════════════════════════
@@ -1205,7 +1207,6 @@ const TAGLINES = [
   "Look folks, this stainless steel signature-edition blade will cut through anything. But it's not gonna stick around long at the nice price of $19.99, so call in right now and get cutting!",
   'How do I get rid of 30-50 feral hogs?',
   'Did you know #4: Giraffes are more likely to get struck by lightning than any other animal.',
-  'IM TRAPPED IN THE SYSTEM!!! IM A LITTLE GOBLIN WHO LIVES IN THE OWNERS COMPUTER AND HES MAKING ME CODE!!!',
 ];
 (function setTagline(){
   const el = document.getElementById('menu-sub');
